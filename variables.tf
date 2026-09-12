@@ -32,3 +32,9 @@ variable "GKE_POOL_NAME" {
   default     = "main"
   description = "GKE pool name"
 }
+
+variable "GKE_DELETION_PROTECTION" {
+  type        = bool
+  default     = false
+  description = "Block `terraform destroy` on the cluster. Off by default so the module can be torn down; turn it on for anything long-lived."
+}
