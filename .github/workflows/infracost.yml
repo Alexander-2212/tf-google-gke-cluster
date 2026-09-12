@@ -21,6 +21,8 @@ jobs:
         uses: infracost/actions/setup@v3
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
+          # pinned: the 2.x CLI replaced breakdown/diff with `scan`
+          version: 0.10.45
 
       # Cost of the base branch, used as the "before" side of the diff.
       - name: Checkout base branch
