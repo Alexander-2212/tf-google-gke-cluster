@@ -1,0 +1,54 @@
+# Infracost cost estimation for pull requests.
+# Posts a comment on the PR with the monthly cost diff of the Terraform changes.
+name: Infracost
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  infracost:
+    name: Infracost
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      # Infracost parses the HCL directly, so no cloud credentials are needed.
+      TF_ROOT: .
+    steps:
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      # Cost of the base branch, used as the "before" side of the diff.
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Generate Infracost cost estimate baseline
+        run: |
+          infracost breakdown --path="${TF_ROOT}" \
+                              --format=json \
+                              --out-file=/tmp/infracost-base.json
+
+      # Cost of the PR branch, used as the "after" side of the diff.
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Generate Infracost diff
+        run: |
+          infracost diff --path="${TF_ROOT}" \
+                         --compare-to=/tmp/infracost-base.json \
+                         --format=json \
+                         --out-file=/tmp/infracost.json
+
+      - name: Post Infracost comment
+        run: |
+          infracost comment github --path=/tmp/infracost.json \
+                                   --repo="$GITHUB_REPOSITORY" \
+                                   --github-token="${{ github.token }}" \
+                                   --pull-request="${{ github.event.pull_request.number }}" \
+                                   --behavior=update
